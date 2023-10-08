@@ -413,6 +413,17 @@ async def btn_create_org_application_true(query: types.CallbackQuery):
     
     await bot.send_message(user_id, "/menu для вызова меню")
     await bot.send_message(query.message.chat.id, "/menu для вызова меню")
+    
+    
+@dp.callback_query(lambda query: query.data.startswith("btn_add_org_application_false_"))
+async def btn_create_org_application_true(query: types.CallbackQuery):
+    await bot.answer_callback_query(query.id)
+    await bot.edit_message_reply_markup(query.message.chat.id, query.message.message_id, query.inline_message_id)
+    org_name, user_id = query.data[30:].split("__")
+    await bot.send_message(int(user_id), f"Ваша заявка в {org_name} была отклонена")
+    
+    await bot.send_message(user_id, "/menu для вызова меню")
+    await bot.send_message(query.message.chat.id, "/menu для вызова меню")
 # endregion 
 
 
