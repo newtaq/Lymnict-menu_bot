@@ -14,11 +14,14 @@ from aiogram.types.keyboard_button import KeyboardButton
 from aiogram.types.reply_keyboard_markup import ReplyKeyboardMarkup
 from aiogram.types.reply_keyboard_remove import ReplyKeyboardRemove
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-import asyncio 
+from aiogram.fsm.storage.memory import MemoryStorage
 
+import asyncio 
+import datetime
 
 from config import BOT_TOKEN
-from jsondb import orgsdb, usersdb
+from jsondb import orgsdb, usersdb, shopdb
+from sqlshop import shoptable
 import os 
 from excel_opener import excel2dict
 
@@ -46,6 +49,7 @@ async def start(message: types.Message):
 async def help(message: types.Message):
     await bot.send_message(message.chat.id, "Пояснения | /help")
 
+
 @dp.message(filters.Command("menu"))
 async def menu(message: types.Message):
     kbuilder = InlineKeyboardBuilder()
@@ -53,6 +57,10 @@ async def menu(message: types.Message):
 
     data = usersdb() 
     user_id = f"{message.from_user.id}"
+
+    shopdb_data = shopdb.data
+    shopdb_data[user_id] = []
+    shopdb.data = shopdb_data
 
     if user_id in data:
         for org in data[user_id]:
@@ -100,7 +108,7 @@ async def btn_org(query: types.CallbackQuery):
         
     if len_categories > 1:
         kbuilder.button(text="◀️", callback_data=f"btn_org_{org_name}__{page-1}")
-    kbuilder.add(InlineKeyboardButton(text="🛒", callback_data=f"btn_orgshopper"), 
+    kbuilder.add(InlineKeyboardButton(text="🛒", callback_data=f"btn_orgshopper_{org_name}"), 
                 InlineKeyboardButton(text="⚙️", callback_data=f"btn_orgsettings_{org_name}"))
     if len_categories > 1:
         kbuilder.button(text="▶️", callback_data=f"btn_org_{org_name}__{page+1}")
@@ -288,36 +296,45 @@ async def btn_org(query: types.CallbackQuery):
         await bot.send_message(query.message.chat.id, f"{category}:", reply_markup=kbuilder.as_markup())
 
 
-items_list = []
 @dp.callback_query(lambda query: query.data.startswith("btn_orgitem_"))
 async def btn_orgitem(query: types.CallbackQuery):
-    global items_list 
-    
     await bot.answer_callback_query(query.id)
-    
     org_name, category, id = query.data[12:].split("__")
-    items_list += [orgsdb.data[org_name]["menu"][category][int(id)]]
+    
+    shopdb_data = shopdb.data
+    shopdb_data[f"{query.message.chat.id}"] += [orgsdb.data[org_name]["menu"][category][int(id)]]
+    shopdb.data = shopdb_data
+    
     
 @dp.callback_query(lambda query: query.data.startswith("btn_orgshopper_"))
 async def btn_orgitem(query: types.CallbackQuery):
-    global items_list 
-    
+
     await bot.answer_callback_query(query.id)
     
     kbuilder = InlineKeyboardBuilder()
     kbuilder.button(text="Отправить заказ в столовую", callback_data="btn_endrequest")
+    
+    items_list = shopdb.data[f'{query.message.chat.id}']
+    
+    if not items_list:
+        await bot.send_message(query.message.chat.id, "Ваша корзина пуста")
+        return 
+    
+    table = shoptable.get_data(query.message.chat.id, f"{datetime.date.today()}")
+    if table:
+        shoptable.delete_data(query.message.chat.id, f"{datetime.date.today()}")
+    shoptable.insert_data(query.message.chat.id, f"{datetime.date.today()}", items_list)
+
     await bot.send_message(query.message.chat.id, f"Ваша корзина: {', '.join(items_list)}", reply_markup=kbuilder.as_markup())
     
 @dp.callback_query(lambda query: query.data == "btn_endrequest")
 async def btn_orgitem(query: types.CallbackQuery):
-    global items_list 
-    items_list.clear() 
 
     await bot.answer_callback_query(query.id)    
 
     await bot.send_message(query.message.chat.id, text="Заказ отправлен в столовую. Корзина очищена.")
 
-    await menu(query.message)
+    await bot.send_message(query.message.chat.id, "/menu для вызова меню")
     
     
 # region btn_create_org_form

@@ -39,3 +39,4 @@ class jsonfile:
 
 usersdb = jsonfile(r"databases\usersdb.json")
 orgsdb = jsonfile(r"databases\orgsdb.json")
+shopdb = jsonfile(r"databases\shopdb.json")
