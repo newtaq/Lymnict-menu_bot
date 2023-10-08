@@ -62,7 +62,7 @@ async def menu(message: types.Message):
         kbuilder.adjust(1, *[5 for _ in range(data_len//5)], data_len % 5 + 1)
     kbuilder.row(InlineKeyboardButton(text="Создать группу", callback_data=f"btn_create_org"))
     await bot.send_message(message.chat.id, f"""\
-{message.from_user.full_name}, вот основное меню (/menu):
+Вот основное меню (/menu):
 /start - перезагрузить бота
 /help - получить помощь по боту
 /addgroup - добавить группу
@@ -356,13 +356,13 @@ class AddFrom(StatesGroup):
     org_name = State()
 
 @router.callback_query(lambda query: query.data == "btn_add_org")
-async def btn_create_org(query: types.CallbackQuery, state: FSMContext):
+async def btn_add_org(query: types.CallbackQuery, state: FSMContext):
     await bot.answer_callback_query(query.id)
     await state.set_state(AddFrom.org_name)
     await bot.send_message(query.message.chat.id, "Введите название организации:\nКомманда /cancel для отмены")
     
 @router.message(AddFrom.org_name)    
-async def btn_create_org_message(message: types.Message, state: FSMContext):
+async def btn_add_org_message(message: types.Message, state: FSMContext):
     org_name = message.text
     await state.clear() 
     user_id = f"{message.from_user.id}"
@@ -379,8 +379,8 @@ async def btn_create_org_message(message: types.Message, state: FSMContext):
         
         await message.reply("Заявка в группу отправлена!")
         
-        kbuilder.button(text="Принять", callback_data=f"btn_create_org_application_true_{org_name}__{message.from_user.id}")
-        kbuilder.button(text="Отклонить", callback_data=f"btn_create_org_application_false_{org_name}__{message.from_user.id}")
+        kbuilder.button(text="Принять", callback_data=f"btn_add_org_application_true_{org_name}__{message.from_user.id}")
+        kbuilder.button(text="Отклонить", callback_data=f"btn_add_org_application_false_{org_name}__{message.from_user.id}")
         
         
         tasks = []
@@ -396,15 +396,23 @@ async def btn_create_org_message(message: types.Message, state: FSMContext):
     
     await menu(message)    
     
-@dp.callback_query(lambda query: query.data.startswith("btn_create_org_application_true_"))
+@dp.callback_query(lambda query: query.data.startswith("btn_add_org_application_true_"))
 async def btn_create_org_application_true(query: types.CallbackQuery):
     await bot.answer_callback_query(query.id)
     await bot.edit_message_reply_markup(query.message.chat.id, query.message.message_id, query.inline_message_id)
-    org_name, user_id = query.data[32:].split("__")
+    org_name, user_id = query.data[29:].split("__")
     await bot.send_message(int(user_id), f"Ваша заявка в {org_name} была одобрена")
     
+    orgsdb_data = orgsdb.data 
+    orgsdb_data[org_name]["members"] += [user_id]
+    orgsdb.data = orgsdb_data
     
-    await menu(query.message.reply_to_message)
+    usersdb_data = usersdb.data 
+    usersdb_data[user_id] += [org_name]
+    usersdb.data = usersdb_data
+    
+    await bot.send_message(user_id, "/menu для вызова меню")
+    await bot.send_message(query.message.chat.id, "/menu для вызова меню")
 # endregion 
 
 
