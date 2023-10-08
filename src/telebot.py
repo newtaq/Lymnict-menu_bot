@@ -383,7 +383,7 @@ async def btn_create_org_message(message: types.Message, state: FSMContext):
         kbuilder.button(text="Отклонить", callback_data=f"btn_create_org_application_false_{org_name}__{message.from_user.id}")
         
         
-        tasks = [menu(message)]
+        tasks = []
         for admin in db[org_name]["admins"]:
             tasks.append(bot.send_message(int(admin), f"Новая заявка в {org_name} от [{message.from_user.full_name}](t.me//{message.from_user.username})", 
                                           parse_mode=ParseMode.MARKDOWN_V2, disable_web_page_preview=True, reply_markup=kbuilder.as_markup()))
