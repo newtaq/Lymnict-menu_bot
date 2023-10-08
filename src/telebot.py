@@ -33,8 +33,10 @@ router = Router()
 
 @dp.message(filters.CommandStart())
 async def start(message: types.Message):
-    await bot.send_message(message.chat.id, "Приветствие")
-    await help(message)
+    await bot.send_message(message.chat.id, "Здравствуйте! Я бот-помощник получения питания в данном заведении. Я могу рассказать о работе наших сервисов и помочь вам выбрать еду для приёма пищи.")
+    await asyncio.sleep(1)
+    await bot.send_message(message.chat.id, "/help - получить руководство")
+    await asyncio.sleep(1)
     
     user_id = f"{message.from_user.id}"
     data = usersdb.data 
@@ -47,8 +49,11 @@ async def start(message: types.Message):
     
 @dp.message(filters.Command("help"))
 async def help(message: types.Message):
-    await bot.send_message(message.chat.id, "Пояснения | /help")
+    await bot.send_message(message.chat.id, """1. Если вы являетесь администратором/управляющим предприятия, то выберете "Создать группу", и далее следуете указаниям бота: напишите название вашего предприятия, выберете среди пунктов пункт с названием вашего предприятия. Потом выберете настройки (вариант с шестерёнкой), затем выберете вариант со стрелочкой. Там будет 4 варианта: список участников (вы сможете посмотреть список сотрудников вашего предприятия), добавить меню (для этого нужно будет прислать файл с расширением xlsx (*.xlsx)), выйти из группы (если вы больше не являетесь управляющим предприятия) и удалить группу (если предприятие прекратило своё существование)
+2. Если вы являетесь сотрудником предприятия, то выберете "Добавить группу" и следуете указаниям бота: выберете название предприятия, нажмите на "меню" (со значком тележкой), где вы сможете выбрать себе еду, и добавьте товары в корзину, оформив заказ""")
 
+    await asyncio.sleep(2)
+    await message.reply("/menu для возвращения в меню")
 
 @dp.message(filters.Command("menu"))
 async def menu(message: types.Message):
